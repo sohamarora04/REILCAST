@@ -1,0 +1,627 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ReliCast Dashboard</title>
+<style>
+:root{
+  --bg:#f4f5f7;--card:#fff;--ink:#16181d;--mute:#6a7180;--line:#e3e6ec;--accent:#2563eb;
+  --tcp:#6b7280;--udp:#d97706;--naive:#dc2626;--relicast:#16a34a;
+  --cell-off:#e6e9ef;--shadow:0 1px 2px rgba(16,24,40,.06),0 1px 8px rgba(16,24,40,.04);
+}
+@media (prefers-color-scheme:dark){:root{
+  --bg:#0f1115;--card:#171a21;--ink:#e8eaee;--mute:#9099a8;--line:#272b35;--accent:#60a5fa;
+  --tcp:#9ca3af;--udp:#f59e0b;--naive:#f87171;--relicast:#4ade80;--cell-off:#262a34;--shadow:none;
+}}
+*{box-sizing:border-box}
+html,body{margin:0}a{color:var(--accent)}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--card)}
+header h1{font-size:18px;margin:0;letter-spacing:.2px}
+header h1 b{color:var(--relicast)}
+header .sub{color:var(--mute);font-size:12.5px;flex:1;min-width:200px}
+.badge{padding:3px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--cell-off);color:var(--mute)}
+.badge.running{background:#fef3c7;color:#92400e}.badge.done{background:#dcfce7;color:#166534}.badge.error{background:#fee2e2;color:#991b1b}
+@media (prefers-color-scheme:dark){.badge.running{background:#422006;color:#fcd34d}.badge.done{background:#052e16;color:#86efac}.badge.error{background:#450a0a;color:#fca5a5}}
+main{max-width:1200px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;box-shadow:var(--shadow)}
+.card h2{font-size:13px;margin:0 0 10px;text-transform:uppercase;letter-spacing:.6px;color:var(--mute);font-weight:600}
+.controls{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;align-items:end}
+.controls label{display:block;font-size:12px;color:var(--mute);margin-bottom:4px}
+.controls label span{color:var(--ink);font-weight:600;float:right}
+.controls input[type=range]{width:100%;accent-color:var(--accent)}
+.controls input[type=number]{width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+button{font:inherit;font-weight:600;border:0;border-radius:8px;padding:9px 18px;background:var(--accent);color:#fff;cursor:pointer}
+button:disabled{opacity:.5;cursor:not-allowed}
+.tabs{display:flex;gap:6px;margin:16px 0 12px}
+.tab{background:transparent;color:var(--mute);border:1px solid var(--line);padding:7px 16px}
+.tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(340px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(280px,1fr))}
+.mt{margin-top:14px}
+.counters{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.ctr{flex:1;min-width:90px;background:var(--bg);border-radius:8px;padding:8px 10px}
+.ctr b{display:block;font-size:20px;font-variant-numeric:tabular-nums}
+.ctr span{font-size:11px;color:var(--mute);text-transform:uppercase;letter-spacing:.5px}
+.pbar{height:8px;background:var(--cell-off);border-radius:99px;overflow:hidden;margin-bottom:12px}
+.pbar i{display:block;height:100%;width:0;background:var(--relicast);transition:width .2s}
+.rx{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px}
+.rxi{border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+.rxi .h{display:flex;justify-content:space-between;font-size:12px;color:var(--mute);margin-bottom:4px}
+.rxi .h b{color:var(--ink)}
+.rxi canvas{width:100%;height:34px;display:block;border-radius:4px}
+.rxi.done .h em{color:var(--relicast);font-style:normal;font-weight:700}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-bottom:8px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.verdict{border-left:4px solid var(--relicast);font-size:15px}
+.verdict p{margin:4px 0}
+table{width:100%;border-collapse:collapse;font-size:13px;font-variant-numeric:tabular-nums}
+th,td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+th:first-child,td:first-child{text-align:left}
+th{color:var(--mute);font-weight:600;font-size:12px}
+.tw{overflow-x:auto}
+svg text{fill:var(--mute);font-size:11px;font-family:inherit}
+svg .t{fill:var(--ink);font-size:12.5px;font-weight:600}
+svg .v{fill:var(--ink);font-size:11px;font-variant-numeric:tabular-nums}
+svg .gl{stroke:var(--line)}
+.empty{color:var(--mute);padding:18px;text-align:center}
+.hide{display:none}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px}
+.note{font-size:12px;color:var(--mute);margin-top:6px}
+
+.cards4{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px}
+.proto{border:2px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--card)}
+.proto:hover{border-color:var(--mute)}.proto.sel{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 20%,transparent)}
+.proto b{display:block;margin-bottom:2px}.proto span{font-size:12px;color:var(--mute)}.proto em{font-style:normal;font-size:11px;background:var(--relicast);color:#fff;padding:1px 7px;border-radius:99px;margin-left:6px}
+.proto.warn span{color:var(--udp)}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:18px;text-align:center;color:var(--mute);cursor:pointer}
+.drop.over{border-color:var(--accent);color:var(--accent)}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+input[type=text]{flex:1;min-width:180px;padding:7px 9px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);font:inherit}
+button.sec{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.danger{background:var(--naive)}
+.big{font-size:22px;font-weight:700;font-family:ui-monospace,Menlo,Consolas,monospace;background:var(--bg);border-radius:8px;padding:10px 14px;display:inline-block;margin:6px 0}
+.list>div{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+.tag{font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;background:var(--cell-off);color:var(--mute)}
+.tag.ok{background:#dcfce7;color:#166534}.tag.fb{background:#fef3c7;color:#92400e}
+@media (prefers-color-scheme:dark){.tag.ok{background:#052e16;color:#86efac}.tag.fb{background:#422006;color:#fcd34d}}
+.up{height:6px;background:var(--cell-off);border-radius:9px;overflow:hidden;margin-top:8px}.up i{display:block;height:100%;width:0;background:var(--accent)}
+.kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
+.hostcard{font-size:12px;color:var(--mute);text-align:right;line-height:1.35}.hostcard b{color:var(--ink)}
+.err{color:var(--naive)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Reli<b>Cast</b> dashboard</h1>
+  <div class="sub">NACK-suppressed reliable multicast vs TCP unicast, raw UDP and naive NACK multicast</div>
+  <div class="hostcard" id="hostcard"></div>
+  <span id="phase" class="badge">idle</span>
+</header>
+<main>
+  <section class="card" id="ctlcard">
+    <div class="controls">
+      <div><label>Receivers <span id="vN">6</span></label><input id="n" type="range" min="1" max="32" value="6"></div>
+      <div><label>Per-receiver loss % <span id="vL">5</span></label><input id="loss" type="range" min="0" max="30" step="0.5" value="5"></div>
+      <div><label>Shared loss % <span id="vS">2</span></label><input id="shared" type="range" min="0" max="20" step="0.5" value="2"></div>
+      <div><label>File size (KB)</label><input id="size" type="number" min="16" max="8192" step="16" value="512"></div>
+      <div><button id="run">Run comparison</button></div>
+    </div>
+    <div id="msg" class="note"></div>
+  </section>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="send">Send</button>
+    <button class="tab" data-tab="recv">Receive</button>
+    <button class="tab" data-tab="live">Compare</button>
+    <button class="tab" data-tab="sweep">Sweeps</button>
+  </div>
+
+  <div id="tab-send">
+    <section class="card" id="s-setup">
+      <h2>1. File</h2>
+      <div class="drop" id="drop">Drop a file here or click to choose<input type="file" id="sfile" hidden></div>
+      <div class="up hide" id="upbar"><i id="upi"></i></div>
+      <div class="row mt"><input type="text" id="spath" placeholder="...or type a local file path"><button class="sec" id="spathgo">Use path</button></div>
+      <div class="list mt" id="outbox"></div>
+      <div class="note" id="chosen"></div>
+      <h2 class="mt">2. Protocol</h2>
+      <div class="cards4" id="protos"></div>
+      <div class="controls mt"><div><label>Link rate <span id="vR">8</span> Mbit/s</label><input id="rate" type="range" min="1" max="100" value="8"></div>
+      <div><button id="sopen">Open session</button></div></div>
+      <div class="note err" id="serr"></div>
+    </section>
+    <section class="card hide" id="s-session">
+      <h2 id="s-title">Session</h2>
+      <div id="s-lobby">
+        <div>Receivers join with:</div><div class="big">python run.py receive</div>
+        <div class="note">Sender address <b id="s-addr"></b> &middot; <span id="s-file"></span></div>
+        <div class="list mt" id="s-rcv"></div>
+      </div>
+      <div id="s-run" class="hide">
+        <div class="pbar"><i id="s-pb"></i></div>
+        <div class="counters" id="s-ctrs"></div>
+        <div class="rx" id="s-rx"></div>
+      </div>
+      <div class="row mt"><button id="sstart" disabled>Start transfer</button><button class="sec danger" id="scancel">Cancel</button><button class="sec hide" id="snew">New transfer</button></div>
+      <div class="note" id="s-msg"></div>
+      <div id="s-result" class="hide mt"></div>
+    </section>
+  </div>
+
+  <div id="tab-recv" class="hide">
+    <section class="card" id="r-pick">
+      <h2>Senders on this network</h2>
+      <div class="list" id="r-list"><div class="empty">Searching...</div></div>
+      <div class="row mt"><input type="text" id="rhost" placeholder="host:port (manual)"><button class="sec" id="rjoin">Join</button></div>
+      <div class="note err" id="rerr"></div>
+    </section>
+    <section class="card hide" id="r-view">
+      <h2 id="r-title">Receiving</h2>
+      <div class="pbar"><i id="r-pb"></i></div>
+      <div class="row"><span class="tag" id="r-tr"></span><span id="r-pct" style="font-weight:700"></span><span class="note" id="r-msg"></span></div>
+      <div class="rxi mt"><canvas id="r-map" style="height:60px"></canvas></div>
+      <div class="kv" id="r-stats"></div>
+      <div id="r-done" class="hide"></div>
+      <div class="row mt"><button class="sec danger" id="rcancel">Cancel</button><button class="sec hide" id="rback">Back to senders</button></div>
+    </section>
+  </div>
+
+  <div id="tab-live" class="hide">
+    <section class="card" id="livecard">
+      <h2 id="livetitle">Live transfer</h2>
+      <div class="pbar"><i id="pb"></i></div>
+      <div class="counters" id="ctrs"></div>
+      <div class="legend"><span><i style="background:var(--relicast)"></i>received</span><span><i style="background:var(--cell-off)"></i>missing</span></div>
+      <div class="rx" id="rx"></div>
+      <div class="empty" id="liveempty">Press "Run comparison" to start a transfer.</div>
+    </section>
+
+    <section class="card verdict mt hide" id="verdict"></section>
+    <div class="grid g3 mt" id="charts"></div>
+    <section class="card mt hide" id="tablecard"><h2>Results</h2><div class="tw" id="table"></div></section>
+    <section class="card mt hide" id="sntpcard"><h2>SNTP clock synchronisation (relicast run)</h2><div class="grid g2" id="sntp"></div></section>
+  </div>
+
+  <div id="tab-sweep" class="hide">
+    <div class="legend" id="sweeplegend"></div>
+    <div class="grid g2" id="sweepcharts"></div>
+    <div class="empty hide" id="sweepempty">No results/experiments.json yet. Run <code>python run.py experiments</code>.</div>
+  </div>
+</main>
+
+<script>
+"use strict";
+var MODES=["tcp","udp","naive","relicast"];
+var LABEL={tcp:"TCP unicast",udp:"Raw UDP",naive:"Naive NACK",relicast:"ReliCast"};
+function col(m){return getComputedStyle(document.documentElement).getPropertyValue("--"+m).trim()||"#888";}
+function $(id){return document.getElementById(id);}
+function esc(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c];});}
+function fmt(v,d){if(v==null||isNaN(v))return "-";var a=Math.abs(v);if(d==null)d=a>=100?0:a>=10?1:a>=1?2:3;return Number(v).toFixed(d);}
+function fbytes(b){if(b==null)return "-";if(b>=1e6)return (b/1e6).toFixed(2)+" MB";if(b>=1e3)return (b/1e3).toFixed(1)+" kB";return b+" B";}
+
+/* ---------- controls ---------- */
+[["n","vN"],["loss","vL"],["shared","vS"]].forEach(function(p){
+  $(p[0]).oninput=function(){$(p[1]).textContent=$(p[0]).value;};
+});
+$("run").onclick=function(){
+  var body={n:+$("n").value,loss:+$("loss").value/100,shared_loss:+$("shared").value/100,size_kb:+$("size").value};
+  $("run").disabled=true;
+  fetch("/api/run",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+   .then(function(r){return r.json().then(function(j){if(!r.ok)$("msg").textContent=j.error||"error";});})
+   .catch(function(e){$("msg").textContent=String(e);}).then(poll);
+};
+var curTab="send";
+function setTab(t){
+  curTab=t;
+  Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(x){x.classList.toggle("on",x.dataset.tab===t);});
+  ["send","recv","live","sweep"].forEach(function(n){$("tab-"+n).classList.toggle("hide",n!==t);});
+  $("ctlcard").classList.toggle("hide",t!=="live");
+  if(t==="sweep")loadSweeps();
+  if(t==="live"&&last)renderResults(last);
+  livePoll();
+}
+Array.prototype.forEach.call(document.querySelectorAll(".tab"),function(b){b.onclick=function(){setTab(b.dataset.tab);};});
+
+/* ---------- polling ---------- */
+var last=null,timer=null,resKey="";
+function poll(){
+  clearTimeout(timer);
+  fetch("/api/state",{cache:"no-store"}).then(function(r){return r.json();}).then(function(s){
+    last=s;render(s);
+    timer=setTimeout(poll,s.phase==="running"?250:1000);
+  }).catch(function(){timer=setTimeout(poll,1500);});
+}
+
+function render(s){
+  var ph=$("phase");ph.textContent=s.phase+(s.phase==="running"&&s.current_mode?" - "+(LABEL[s.current_mode]||s.current_mode):"");
+  ph.className="badge "+s.phase;
+  $("run").disabled=s.phase==="running";
+  $("msg").textContent=s.message||"";
+  renderLive(s);
+  var k=JSON.stringify(Object.keys(s.results||{}))+s.phase;
+  if(curTab!=="live"){resKey="";return;}
+  if(k!==resKey||s.phase==="running"&&k!==resKey){resKey=k;renderResults(s);}
+}
+
+/* ---------- live chunk map ---------- */
+var rxEls={};
+function popcount(b){var c=0;while(b){c+=b&1;b>>=1;}return c;}
+function bitAt(hex,i){var byte=i>>3,p=byte*2;if(p+1>hex.length)return 0;return (parseInt(hex.substr(p,2),16)>>(i&7))&1;}
+function renderLive(s){if(curTab==='live')showLive(s.live,{title:'livetitle',pb:'pb',ctrs:'ctrs',rx:'rx',empty:'liveempty',store:rxEls});}
+function showLive(ev,o){
+  var rxEls=o.store;
+  var show=!!ev;
+  if(o.empty&&$(o.empty))$(o.empty).classList.toggle("hide",show);
+  if(!ev){$(o.ctrs).innerHTML="";$(o.rx).innerHTML="";for(var q in rxEls)delete rxEls[q];$(o.pb).style.width="0";return;}
+  if(o.title)$(o.title).textContent="Live transfer - "+(LABEL[ev.mode]||ev.mode)+" ("+fmt(ev.elapsed,1)+" s)";
+  var rs=ev.receivers||[],ch=ev.chunks||1,tot=0;
+  rs.forEach(function(r){tot+=r.have;});
+  var pct=rs.length?100*tot/(rs.length*ch):0;
+  $(o.pb).style.width=Math.min(100,pct)+"%";
+  var c=ev.counters||{};
+  var defs=[["data","data pkts"],["repair","repair pkts"],["heartbeat","heartbeats"],["nack","NACKs"],["suppressed","suppressed"]];
+  var h='<div class="ctr"><b>'+fmt(pct,1)+'%</b><span>delivered</span></div>';
+  defs.forEach(function(d){h+='<div class="ctr"><b>'+(c[d[0]]!=null?c[d[0]]:0)+'</b><span>'+d[1]+'</span></div>';});
+  h+='<div class="ctr"><b>'+fbytes(c.sender_bytes||0)+'</b><span>sender bytes</span></div>';
+  $(o.ctrs).innerHTML=h;
+  var box=$(o.rx);
+  if(box.children.length!==rs.length||box.dataset.mode!==ev.mode){
+    box.innerHTML="";for(var q in rxEls)delete rxEls[q];box.dataset.mode=ev.mode;
+    rs.forEach(function(r){
+      var d=document.createElement("div");d.className="rxi";
+      d.innerHTML='<div class="h"><span>Receiver <b>'+r.rid+'</b></span><span class="pc"></span></div><canvas></canvas>';
+      box.appendChild(d);rxEls[r.rid]={d:d,pc:d.querySelector(".pc"),cv:d.querySelector("canvas")};
+    });
+  }
+  rs.forEach(function(r){
+    var e=rxEls[r.rid];if(!e)return;
+    e.d.classList.toggle("done",!!r.complete);
+    e.pc.innerHTML=(r.complete?"<em>done</em> ":"")+fmt(100*r.have/ch,0)+"%";
+    drawMap(e.cv,r.bitmap||"",ch);
+  });
+}
+function drawMap(cv,hex,ch){
+  var dpr=window.devicePixelRatio||1,w=cv.clientWidth,h=cv.clientHeight;
+  if(!w)return;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  var g=cv.getContext("2d");g.setTransform(dpr,0,0,dpr,0,0);
+  var off=getComputedStyle(document.documentElement).getPropertyValue("--cell-off").trim();
+  var on=col("relicast");
+  g.clearRect(0,0,w,h);
+  var cs=Math.max(4,Math.floor(Math.sqrt(w*h/Math.min(ch,2000))));  // cell size
+  var cols=Math.floor(w/cs),rows=Math.ceil(h/cs),cells=cols*rows;
+  var per=Math.max(1,Math.ceil(ch/cells)),nc=Math.ceil(ch/per);
+  // if too many chunks: aggregate; else one chunk per cell
+  var cc=Math.max(1,Math.floor(w/cs)),rr=Math.ceil(nc/cc);
+  var ch2=Math.min(h,rr*cs);
+  if(rr*cs>h){cs=Math.max(1,Math.floor(h/rr));cc=Math.floor(w/cs);}
+  for(var i=0;i<nc;i++){
+    var got=0,n=0;
+    for(var j=i*per;j<Math.min(ch,(i+1)*per);j++){got+=bitAt(hex,j);n++;}
+    var f=n?got/n:0;
+    var x=(i%cc)*cs,y=Math.floor(i/cc)*cs;
+    g.fillStyle=off;g.fillRect(x,y,cs-1,cs-1);
+    if(f>0){g.globalAlpha=0.25+0.75*f;g.fillStyle=on;g.fillRect(x,y,cs-1,cs-1);g.globalAlpha=1;}
+  }
+}
+
+/* ---------- SVG helpers ---------- */
+function niceMax(v){if(v<=0)return 1;var p=Math.pow(10,Math.floor(Math.log10(v))),f=v/p;var n=f<=1?1:f<=2?2:f<=5?5:10;return n*p;}
+function barChart(title,unit,items,digits){
+  var W=320,H=210,L=12,R=12,T=34,B=44,pw=W-L-R,ph=H-T-B;
+  var mx=niceMax(Math.max.apply(null,items.map(function(i){return i.v||0;}).concat([1e-9])));
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(title)+'"><text class="t" x="'+L+'" y="16">'+esc(title)+'</text>';
+  if(unit)s+='<text x="'+(W-R)+'" y="16" text-anchor="end">'+esc(unit)+'</text>';
+  for(var g=0;g<=2;g++){var y=T+ph-ph*g/2;s+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/>';}
+  var bw=pw/items.length;
+  items.forEach(function(it,i){
+    var v=it.v==null?0:it.v,h=ph*v/mx,x=L+i*bw+bw*.18,w=bw*.64;
+    s+='<rect x="'+x+'" y="'+(T+ph-h)+'" width="'+w+'" height="'+Math.max(h,1)+'" rx="3" fill="'+col(it.m)+'"><title>'+esc(LABEL[it.m])+': '+fmt(v,digits)+' '+esc(unit||"")+'</title></rect>';
+    s+='<text class="v" x="'+(x+w/2)+'" y="'+(T+ph-h-4)+'" text-anchor="middle">'+(it.v==null?"-":fmt(it.v,digits))+'</text>';
+    s+='<text x="'+(x+w/2)+'" y="'+(H-B+16)+'" text-anchor="middle">'+esc(LABEL[it.m].split(" ")[0])+'</text>';
+  });
+  return s+'</svg>';
+}
+function groupedBars(title,unit,items,series,digits){ // items: [{m, a, b}]
+  var W=320,H=210,L=12,R=12,T=34,B=44,pw=W-L-R,ph=H-T-B;
+  var mx=niceMax(Math.max.apply(null,[1e-9].concat.apply([],items.map(function(i){return [i.a||0,i.b||0];}))));
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(title)+'"><text class="t" x="'+L+'" y="16">'+esc(title)+'</text>';
+  s+='<text x="'+(W-R)+'" y="16" text-anchor="end">'+esc(unit)+'</text>';
+  for(var g=0;g<=2;g++){var y=T+ph-ph*g/2;s+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/>';}
+  var bw=pw/items.length;
+  items.forEach(function(it,i){
+    [it.a,it.b].forEach(function(v,k){
+      v=v==null?0:v;var h=ph*v/mx,w=bw*.32,x=L+i*bw+bw*.17+k*w;
+      s+='<rect x="'+x+'" y="'+(T+ph-h)+'" width="'+w+'" height="'+Math.max(h,1)+'" rx="2" fill="'+col(it.m)+'" opacity="'+(k?0.5:1)+'"><title>'+esc(LABEL[it.m])+' '+series[k]+': '+fmt(v,digits)+'</title></rect>';
+      s+='<text class="v" x="'+(x+w/2)+'" y="'+(T+ph-h-3)+'" text-anchor="middle" style="font-size:9.5px">'+fmt(v,digits)+'</text>';
+    });
+    s+='<text x="'+(L+i*bw+bw/2)+'" y="'+(H-B+16)+'" text-anchor="middle">'+esc(LABEL[it.m].split(" ")[0])+'</text>';
+  });
+  s+='<text x="'+L+'" y="'+(H-6)+'">solid = '+series[0]+', faded = '+series[1]+'</text>';
+  return s+'</svg>';
+}
+function lineChart(title,xlabel,ylabel,series,ymax){ // series:[{m,pts:[[x,y]]}]
+  var W=480,H=270,L=50,R=16,T=34,B=44,pw=W-L-R,ph=H-T-B;
+  var xs=[],ys=[];series.forEach(function(se){se.pts.forEach(function(p){xs.push(p[0]);ys.push(p[1]);});});
+  if(!xs.length)return '<div class="empty">no data</div>';
+  var x0=Math.min.apply(null,xs),x1=Math.max.apply(null,xs);if(x1===x0)x1=x0+1;
+  var ym=ymax||niceMax(Math.max.apply(null,ys.concat([1e-9])));
+  function X(v){return L+pw*(v-x0)/(x1-x0);}function Y(v){return T+ph-ph*v/ym;}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%" role="img" aria-label="'+esc(title)+'"><text class="t" x="'+L+'" y="16">'+esc(title)+'</text>';
+  for(var g=0;g<=4;g++){var y=T+ph-ph*g/4;s+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(ym*g/4)+'</text>';}
+  var tx=Array.from(new Set(xs)).sort(function(a,b){return a-b;});
+  if(tx.length>8)tx=tx.filter(function(_,i){return i%Math.ceil(tx.length/8)===0;});
+  tx.forEach(function(v){s+='<text x="'+X(v)+'" y="'+(H-B+16)+'" text-anchor="middle">'+v+'</text>';});
+  s+='<text x="'+(L+pw/2)+'" y="'+(H-8)+'" text-anchor="middle">'+esc(xlabel)+'</text>';
+  s+='<text x="12" y="'+(T+ph/2)+'" text-anchor="middle" transform="rotate(-90 12 '+(T+ph/2)+')">'+esc(ylabel)+'</text>';
+  series.forEach(function(se){
+    var p=se.pts.slice().sort(function(a,b){return a[0]-b[0];});
+    s+='<polyline fill="none" stroke="'+col(se.m)+'" stroke-width="2.2" stroke-linejoin="round" points="'+p.map(function(q){return X(q[0])+","+Y(q[1]);}).join(" ")+'"/>';
+    p.forEach(function(q){s+='<circle cx="'+X(q[0])+'" cy="'+Y(q[1])+'" r="3.2" fill="'+col(se.m)+'"><title>'+esc(LABEL[se.m])+' @ '+q[0]+': '+fmt(q[1])+'</title></circle>';});
+  });
+  return s+'</svg>';
+}
+
+/* ---------- comparison results ---------- */
+function card(inner){return '<div class="card">'+inner+'</div>';}
+function renderResults(s){
+  var R=s.results||{},have=MODES.filter(function(m){return R[m];});
+  var has=have.length>0;
+  ["verdict","tablecard"].forEach(function(id){$(id).classList.toggle("hide",!has);});
+  $("charts").innerHTML="";
+  if(!has){$("sntpcard").classList.add("hide");return;}
+  function pick(f,d){return have.map(function(m){return {m:m,v:f(R[m])};});}
+  var h="";
+  h+=card(barChart("Duration","seconds",pick(function(r){return r.duration_s;})));
+  h+=card(barChart("Overhead ratio","x file size (1.0 = ideal)",pick(function(r){return r.overhead_ratio;})));
+  h+=card(barChart("Total bytes on wire","kB",pick(function(r){return r.total_bytes/1000;}),0));
+  h+=card(barChart("Delivery ratio","% of chunks",pick(function(r){return 100*r.delivery_ratio;}),1));
+  h+=card(barChart("NACK packets","count",pick(function(r){return r.nack_packets;}),0));
+  h+=card(barChart("Repair packets","count",pick(function(r){return r.repair_packets;}),0));
+  h+=card(groupedBars("One-way delay / jitter","ms",have.map(function(m){return {m:m,a:R[m].owd_mean_ms,b:R[m].jitter_ms};}),["OWD mean","jitter"],2));
+  h+=card(barChart("Goodput","Mbit/s",pick(function(r){return r.goodput_mbps;})));
+  $("charts").innerHTML=h;
+  // verdict
+  var v=[],rc=R.relicast,tc=R.tcp,nv=R.naive,ud=R.udp;
+  if(rc&&tc)v.push("ReliCast uses <b>"+fmt(tc.total_bytes/rc.total_bytes,1)+"x fewer bytes</b> than TCP unicast ("+fbytes(rc.total_bytes)+" vs "+fbytes(tc.total_bytes)+")"+
+     (rc.duration_s&&tc.duration_s?" and finishes in "+fmt(rc.duration_s,2)+" s vs "+fmt(tc.duration_s,2)+" s":"")+".");
+  if(rc&&nv)v.push("Compared with naive multicast NACKs it sends <b>"+(rc.nack_packets<nv.nack_packets?fmt(nv.nack_packets/Math.max(rc.nack_packets,1),1)+"x fewer NACKs":"a similar number of NACKs")+"</b> ("+rc.nack_packets+" vs "+nv.nack_packets+") and "+rc.repair_packets+" vs "+nv.repair_packets+" repair packets.");
+  if(rc&&ud)v.push("Raw UDP delivers only <b>"+fmt(100*ud.delivery_ratio,1)+"%</b> of the data; ReliCast delivers <b>"+fmt(100*rc.delivery_ratio,1)+"%</b>"+(rc.all_verified?" with every receiver's SHA-256 verified":"")+".");
+  if(!v.length)v.push("Run all four modes to see the comparison verdict.");
+  $("verdict").innerHTML=v.map(function(x){return "<p>"+x+"</p>";}).join("");
+  // table
+  var cols=[["Mode",null],["Duration s",function(r){return fmt(r.duration_s,2);}],["Delivery %",function(r){return fmt(100*r.delivery_ratio,1);}],["Verified",function(r){return r.all_verified?"yes":"no";}],
+    ["Sender bytes",function(r){return fbytes(r.sender_bytes);}],["Total bytes",function(r){return fbytes(r.total_bytes);}],["Overhead x",function(r){return fmt(r.overhead_ratio,2);}],
+    ["Data pkts",function(r){return r.data_packets;}],["Repair",function(r){return r.repair_packets;}],["NACKs",function(r){return r.nack_packets;}],["Suppressed",function(r){return r.nack_suppressed;}],
+    ["Dup",function(r){return r.dup_data;}],["OWD ms",function(r){return fmt(r.owd_mean_ms,2);}],["p95 ms",function(r){return fmt(r.owd_p95_ms,2);}],["Jitter ms",function(r){return fmt(r.jitter_ms,2);}],["Goodput Mb/s",function(r){return fmt(r.goodput_mbps,1);}]];
+  var t="<table><thead><tr>"+cols.map(function(c){return "<th>"+c[0]+"</th>";}).join("")+"</tr></thead><tbody>";
+  have.forEach(function(m){t+='<tr><td><span class="dot" style="background:'+col(m)+'"></span><b>'+LABEL[m]+'</b></td>'+cols.slice(1).map(function(c){return "<td>"+c[1](R[m])+"</td>";}).join("")+"</tr>";});
+  $("table").innerHTML=t+"</tbody></table>";
+  renderSntp(R.relicast||R[have[have.length-1]]);
+}
+
+function renderSntp(r){
+  var box=$("sntpcard");
+  if(!r||!r.skews_ms||!r.skews_ms.length){box.classList.add("hide");return;}
+  box.classList.remove("hide");
+  var n=r.skews_ms.length,sk=r.skews_ms,es=r.sntp_offsets_ms||[];
+  // chart 1: skew vs estimated offset per receiver
+  var W=480,H=250,L=50,R=16,T=34,B=40,pw=W-L-R,ph=H-T-B;
+  var all=sk.concat(es),mx=niceMax(Math.max.apply(null,all.map(Math.abs).concat([1])));
+  function Y(v){return T+ph/2-(ph/2)*v/mx;}
+  var s='<svg viewBox="0 0 '+W+' '+H+'" width="100%"><text class="t" x="'+L+'" y="16">Injected skew vs SNTP estimate (ms)</text>';
+  [-1,-.5,0,.5,1].forEach(function(g){var y=Y(mx*g);s+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+y+'" y2="'+y+'"/><text x="'+(L-6)+'" y="'+(y+4)+'" text-anchor="end">'+fmt(mx*g,0)+'</text>';});
+  var bw=pw/n;
+  sk.forEach(function(v,i){
+    var e=es[i]==null?0:es[i],x=L+i*bw+bw*.12,w=bw*.36;
+    s+='<rect x="'+x+'" y="'+Math.min(Y(0),Y(v))+'" width="'+w+'" height="'+Math.max(1,Math.abs(Y(v)-Y(0)))+'" fill="var(--tcp)"><title>rx '+(i+1)+' injected skew '+fmt(v,1)+' ms</title></rect>';
+    s+='<rect x="'+(x+w)+'" y="'+Math.min(Y(0),Y(e))+'" width="'+w+'" height="'+Math.max(1,Math.abs(Y(e)-Y(0)))+'" fill="var(--relicast)"><title>rx '+(i+1)+' SNTP estimate '+fmt(e,1)+' ms (error '+fmt(e-v,2)+')</title></rect>';
+    if(n<=16)s+='<text x="'+(L+i*bw+bw/2)+'" y="'+(H-B+16)+'" text-anchor="middle">R'+(i+1)+'</text>';
+  });
+  s+='<text x="'+L+'" y="'+(H-6)+'">grey = injected skew, green = SNTP estimate</text></svg>';
+  var maxerr=0;sk.forEach(function(v,i){maxerr=Math.max(maxerr,Math.abs((es[i]||0)-v));});
+  var raw=r.owd_raw_mean_ms,cor=r.owd_mean_ms;
+  var s2=barChart("OWD raw vs corrected","ms (mean)",[{m:"naive",v:raw},{m:"relicast",v:cor}],2);
+  s2=s2.replace(">Naive<",">raw clocks<").replace(">ReliCast<",">corrected<");
+  box.querySelector("#sntp").innerHTML=card(s+'<div class="note">Max estimation error: <b>'+fmt(maxerr,2)+' ms</b></div>')+card(s2.replace("<svg ","<svg style=\"max-width:360px;display:block;margin:auto\" ")+'<div class="note">Without SNTP the unsynchronised clocks swamp the real delay.</div>');
+}
+
+/* ---------- sweeps ---------- */
+var sweepLoaded=false;
+function loadSweeps(){
+  fetch("/api/experiments",{cache:"no-store"}).then(function(r){return r.json();}).then(drawSweeps).catch(function(){});
+}
+function avgSeries(rows,xk,yf){
+  var out={};
+  (rows||[]).forEach(function(r){
+    var y=yf(r);if(y==null||isNaN(y))return;
+    var o=out[r.mode]||(out[r.mode]={});var a=o[r[xk]]||(o[r[xk]]=[0,0]);a[0]+=y;a[1]++;
+  });
+  return MODES.filter(function(m){return out[m];}).map(function(m){
+    return {m:m,pts:Object.keys(out[m]).map(function(x){return [+x,out[m][x][0]/out[m][x][1]];})};
+  });
+}
+function drawSweeps(d){
+  var ok=d&&(d.sweep_receivers||d.sweep_loss);
+  $("sweepempty").classList.toggle("hide",!!ok);
+  $("sweeplegend").innerHTML=ok?MODES.map(function(m){return '<span><i style="background:'+col(m)+'"></i>'+LABEL[m]+'</span>';}).join("")+(d.meta?'<span>reps: '+(d.meta.reps||"?")+' (averaged)</span>':""):"";
+  if(!ok){$("sweepcharts").innerHTML="";return;}
+  var sr=d.sweep_receivers,sl=d.sweep_loss,h="";
+  h+=card(lineChart("Duration vs receivers","receivers","seconds",avgSeries(sr,"n",function(r){return r.duration_s;})));
+  h+=card(lineChart("Overhead ratio vs receivers","receivers","total bytes / file size",avgSeries(sr,"n",function(r){return r.overhead_ratio;})));
+  h+=card(lineChart("Duration vs loss","per-receiver loss (%)","seconds",avgSeries((sl||[]).map(function(r){return Object.assign({},r,{lp:Math.round(r.loss*1000)/10});}),"lp",function(r){return r.duration_s;})));
+  h+=card(lineChart("Delivery ratio vs loss","per-receiver loss (%)","delivery (%)",avgSeries((sl||[]).map(function(r){return Object.assign({},r,{lp:Math.round(r.loss*1000)/10});}),"lp",function(r){return 100*r.delivery_ratio;}),100));
+  h+=card(lineChart("NACK packets vs receivers","receivers","NACKs",avgSeries(sr,"n",function(r){return r.nack_packets;})));
+  h+=card(lineChart("Overhead ratio vs loss","per-receiver loss (%)","total bytes / file size",avgSeries((sl||[]).map(function(r){return Object.assign({},r,{lp:Math.round(r.loss*1000)/10});}),"lp",function(r){return r.overhead_ratio;})));
+  $("sweepcharts").innerHTML=h;
+}
+
+if(window.matchMedia)window.matchMedia("(prefers-color-scheme:dark)").addEventListener&&window.matchMedia("(prefers-color-scheme:dark)").addEventListener("change",function(){resKey="";if(last)render(last);loadSweepsIfOn();});
+function loadSweepsIfOn(){if(!$("tab-sweep").classList.contains("hide"))loadSweeps();}
+window.addEventListener("resize",function(){if(last)renderLive(last);});
+
+/* ================= Live tools: Send / Receive ================= */
+function api(method,url,body){
+  return fetch(url,{method:method,headers:body?{"Content-Type":"application/json"}:{},body:body?JSON.stringify(body):undefined,cache:"no-store"})
+   .then(function(r){return r.json().catch(function(){return {};}).then(function(j){if(!r.ok)throw new Error(j.error||("HTTP "+r.status));return j;});});
+}
+function fsize(b){b=+b||0;if(b>=1e9)return (b/1e9).toFixed(2)+" GB";if(b>=1e6)return (b/1e6).toFixed(1)+" MB";if(b>=1e3)return (b/1e3).toFixed(1)+" kB";return b+" B";}
+var PROTOS=[["relicast","ReliCast","Multicast + randomized NACK repair. Auto TCP fallback where multicast is blocked.",1],
+ ["naive","Multicast + immediate NACK","Multicast; every receiver NACKs at once (no suppression). For comparison.",0],
+ ["tcp","TCP unicast","One reliable TCP stream per receiver. Simple, but sender traffic grows with N.",0],
+ ["udp","Raw UDP","Unicast copies, no repair. Lossy - demo only.",0,1]];
+var proto="relicast",chosenPath=null,chosenName="";
+function drawProtos(){
+  $("protos").innerHTML=PROTOS.map(function(p){return '<div class="proto'+(p[0]===proto?' sel':'')+(p[4]?' warn':'')+'" data-m="'+p[0]+'"><b>'+p[1]+(p[3]?'<em>recommended</em>':'')+'</b><span>'+p[2]+'</span></div>';}).join("");
+  Array.prototype.forEach.call(document.querySelectorAll(".proto"),function(e){e.onclick=function(){proto=e.dataset.m;drawProtos();};});
+}
+drawProtos();
+$("rate").oninput=function(){$("vR").textContent=$("rate").value;};
+function choose(path,name){chosenPath=path;chosenName=name;$("chosen").innerHTML="Selected: <b>"+esc(name)+"</b>";}
+function loadOutbox(){
+  api("GET","/api/send/files").then(function(l){
+    $("outbox").innerHTML=l.length?l.map(function(f,i){return '<div><span>'+esc(f.name)+' <span class="note">'+fsize(f.size)+'</span></span><button class="sec" data-i="'+i+'">Use</button></div>';}).join(""):"";
+    Array.prototype.forEach.call($("outbox").querySelectorAll("button"),function(b){b.onclick=function(){var f=l[+b.dataset.i];choose(f.path,f.name);};});
+  }).catch(function(){});
+}
+function upload(file){
+  $("serr").textContent="";$("upbar").classList.remove("hide");$("upi").style.width="0";
+  var x=new XMLHttpRequest();x.open("POST","/api/send/upload?name="+encodeURIComponent(file.name));
+  x.upload.onprogress=function(e){if(e.lengthComputable)$("upi").style.width=(100*e.loaded/e.total)+"%";};
+  x.onload=function(){$("upbar").classList.add("hide");
+    if(x.status===200){var j=JSON.parse(x.responseText);choose(j.path,j.name);loadOutbox();}else{var m="upload failed";try{m=JSON.parse(x.responseText).error;}catch(e){}$("serr").textContent=m;}};
+  x.onerror=function(){$("upbar").classList.add("hide");$("serr").textContent="upload failed";};
+  x.send(file);
+}
+$("drop").onclick=function(){$("sfile").click();};
+$("sfile").onchange=function(){if(this.files[0])upload(this.files[0]);};
+["dragenter","dragover"].forEach(function(e){$("drop").addEventListener(e,function(ev){ev.preventDefault();$("drop").classList.add("over");});});
+["dragleave","drop"].forEach(function(e){$("drop").addEventListener(e,function(ev){ev.preventDefault();$("drop").classList.remove("over");});});
+$("drop").addEventListener("drop",function(ev){var f=ev.dataTransfer.files[0];if(f)upload(f);});
+$("spathgo").onclick=function(){var p=$("spath").value.trim();if(p)choose(p,p.split(/[\\/]/).pop());};
+$("sopen").onclick=function(){
+  $("serr").textContent="";
+  if(!chosenPath){$("serr").textContent="Choose a file first.";return;}
+  api("POST","/api/send/open",{path:chosenPath,mode:proto,rate_mbps:+$("rate").value}).then(function(st){sState=st;renderSend(st);livePoll();}).catch(function(e){$("serr").textContent=e.message;});
+};
+$("sstart").onclick=function(){api("POST","/api/send/start").then(function(st){sState=st;renderSend(st);}).catch(function(e){$("s-msg").textContent=e.message;});};
+$("scancel").onclick=function(){api("POST","/api/send/cancel").then(function(st){sState=st;renderSend(st);}).catch(function(){});};
+$("snew").onclick=function(){sState=null;renderSend({phase:"idle"});};
+var sState=null,sStore={};
+function sendResultCard(r,st){
+  if(!r)return "";
+  var h='<div class="kv">';
+  [["Time",fmt(r.duration_s,2)+" s"],["Goodput",fmt(r.goodput_mbps,1)+" Mbit/s"],["Bytes on wire",fbytes(r.total_bytes)],["Overhead",fmt(r.overhead_ratio,2)+"x"],
+   ["NACKs",r.nack_packets],["Suppressed",r.nack_suppressed],["Repairs",r.repair_packets],["Delivery",fmt(100*r.delivery_ratio,1)+"%"],["OWD / jitter",fmt(r.owd_mean_ms,2)+" / "+fmt(r.jitter_ms,2)+" ms"]]
+   .forEach(function(k){h+='<div class="ctr"><b style="font-size:16px">'+k[1]+'</b><span>'+k[0]+'</span></div>';});
+  h+='</div><div class="list">';
+  (st.receivers||[]).forEach(function(x){h+='<div><span>Receiver '+x.rid+' &middot; '+esc(x.ip||"")+'</span><span class="tag '+(x.verified?'ok':'')+'">'+(x.verified?"verified":x.verified===false?"FAILED":x.complete?"complete":"incomplete")+'</span></div>';});
+  return '<h2>Result</h2>'+h+'</div><div class="note">Run the four protocols on a simulated network in the <a href="#" onclick="setTab(\'live\');return false">Compare</a> tab.</div>';
+}
+function transTag(x){
+  if(x.transport==="pending"||!x.transport)return '<span class="tag">joining</span>';
+  if(x.transport==="mcast"||x.mcast_ok===true)return '<span class="tag ok">multicast ok</span>';
+  if(x.transport==="tcp"&&x.mcast_ok===false)return '<span class="tag fb">TCP fallback</span>';
+  return '<span class="tag">'+esc(x.transport)+'</span>';
+}
+function renderSend(st){
+  if(!st)st={phase:"idle"};
+  var ph=st.phase||"idle",idle=ph==="idle";
+  $("s-setup").classList.toggle("hide",!idle);
+  $("s-session").classList.toggle("hide",idle);
+  if(idle)return;
+  var rcv=st.receivers||[];
+  $("s-title").textContent="Session - "+({lobby:"waiting for receivers",probing:"probing network",sending:"sending",done:"finished",error:"error",cancelled:"cancelled"}[ph]||ph);
+  var lobby=ph==="lobby"||ph==="probing";
+  $("s-lobby").classList.toggle("hide",!lobby);
+  $("s-run").classList.toggle("hide",lobby);
+  $("s-addr").textContent=(st.host||"")+":"+(st.port||"");
+  $("s-file").textContent=st.file?(st.file.name+" ("+fsize(st.file.size)+") via "+(LABEL[st.mode]||st.mode)+" @ "+st.rate_mbps+" Mbit/s"):"";
+  $("s-rcv").innerHTML=rcv.length?rcv.map(function(x){return '<div><span>Receiver '+x.rid+' &middot; '+esc(x.ip||"?")+'</span>'+transTag(x)+'</div>';}).join(""):'<div class="empty" style="width:100%">No receivers yet</div>';
+  $("sstart").classList.toggle("hide",ph!=="lobby");
+  $("sstart").disabled=!(ph==="lobby"&&rcv.length>=1);
+  var active=ph==="lobby"||ph==="probing"||ph==="sending";
+  $("scancel").classList.toggle("hide",!active);
+  $("snew").classList.toggle("hide",active);
+  $("s-msg").textContent=st.message||"";$("s-msg").className="note"+(ph==="error"?" err":"");
+  if(!lobby){
+    var ev=st.live;
+    if(!ev&&rcv.length){ // synthesize from receiver rows
+      var tot=st.file?Math.max(1,Math.ceil(st.file.size/1024)):1;
+      ev={mode:st.mode,elapsed:0,chunks:tot,receivers:rcv.map(function(x){return {rid:x.rid,have:Math.round((x.pct||0)*tot/100),complete:x.complete,bitmap:""};}),counters:{}};
+    }
+    if(ev)showLive(ev,{title:null,pb:"s-pb",ctrs:"s-ctrs",rx:"s-rx",store:sStore});
+    if(ph==="done"&&st.result)$("s-pb").style.width="100%";
+  }
+  $("s-result").classList.toggle("hide",!(ph==="done"&&st.result));
+  if(ph==="done"&&st.result)$("s-result").innerHTML=sendResultCard(st.result,st);
+}
+/* receive */
+var rState=null;
+$("rjoin").onclick=function(){
+  var v=$("rhost").value.trim(),m=v.match(/^(.+):(\d+)$/);
+  if(!m){$("rerr").textContent="Enter host:port";return;}
+  joinSender(m[1],+m[2]);
+};
+function joinSender(h,p){
+  $("rerr").textContent="";
+  api("POST","/api/recv/join",{host:h,port:p}).then(function(st){rState=st;renderRecv(st);livePoll();}).catch(function(e){$("rerr").textContent=e.message;});
+}
+$("rcancel").onclick=function(){api("POST","/api/recv/cancel").then(function(st){rState=st;renderRecv(st);}).catch(function(){});};
+$("rback").onclick=function(){rState=null;renderRecv({phase:"idle"});livePoll();};
+function discover(){
+  if(curTab!=="recv"||(rState&&rState.phase&&rState.phase!=="idle"))return;
+  api("GET","/api/recv/discover").then(function(l){
+    $("r-list").innerHTML=l.length?l.map(function(x,i){return '<div><span><b>'+esc(x.name||"(file)")+'</b> <span class="note">'+fsize(x.size)+' &middot; '+esc(LABEL[x.mode]||x.mode)+' &middot; from '+esc(x.sender||x.host)+' ('+esc(x.host)+':'+x.port+')</span></span><button data-i="'+i+'">Join</button></div>';}).join(""):'<div class="empty" style="width:100%">No senders found yet. Start one in the Send tab on another device.</div>';
+    Array.prototype.forEach.call($("r-list").querySelectorAll("button"),function(b){b.onclick=function(){var x=l[+b.dataset.i];joinSender(x.host,x.port);};});
+  }).catch(function(){});
+}
+function renderRecv(st){
+  if(!st)st={phase:"idle"};
+  var ph=st.phase||"idle",idle=ph==="idle";
+  $("r-pick").classList.toggle("hide",!idle);$("r-view").classList.toggle("hide",idle);
+  if(idle)return;
+  $("r-title").textContent=({connecting:"Connecting...",waiting:"Waiting for sender to start",receiving:"Receiving",done:"Finished",error:"Error"}[ph]||ph)+(st.name?" - "+st.name:"");
+  var pct=st.pct||0;$("r-pb").style.width=Math.min(100,pct)+"%";$("r-pct").textContent=fmt(pct,1)+"%";
+  $("r-tr").textContent=st.transport==="mcast"?"multicast":st.transport?st.transport.toUpperCase()+(st.transport==="tcp"?" (fallback)":""):"...";
+  $("r-tr").className="tag "+(st.transport==="mcast"?"ok":st.transport==="tcp"?"fb":"");
+  $("r-msg").textContent=st.message||"";$("r-msg").className="note"+(ph==="error"?" err":"");
+  var s=st.stats||{};
+  var kv=[["Chunks",(st.have||0)+" / "+(st.chunks||0)],["Size",fsize(st.size)],["NACKs sent",s.nacks],["Suppressed",s.suppressed],["Packets",s.recv],["Duplicates",s.dups],["OWD",s.owd_mean_ms!=null?fmt(s.owd_mean_ms,2)+" ms":null],["Jitter",s.jitter_ms!=null?fmt(s.jitter_ms,2)+" ms":null],["Time",s.duration_s!=null?fmt(s.duration_s,2)+" s":null]].filter(function(k){return k[1]!=null&&k[1]!=="undefined";});
+  $("r-stats").innerHTML=kv.map(function(k){return '<div class="ctr"><b style="font-size:16px">'+k[1]+'</b><span>'+k[0]+'</span></div>';}).join("");
+  drawMap($("r-map"),st.bitmap||"",st.chunks||1);
+  var active=ph==="connecting"||ph==="waiting"||ph==="receiving";
+  $("rcancel").classList.toggle("hide",!active);$("rback").classList.toggle("hide",active);
+  $("r-done").classList.toggle("hide",ph!=="done");
+  if(ph==="done")$("r-done").innerHTML='<div class="verdict card"><b>'+(st.verified===false?'<span class="err">Checksum mismatch</span>':'&#10003; Received'+(st.verified?' and SHA-256 verified':''))+'</b><p>Saved to <code>'+esc(st.saved_path||"?")+'</code></p></div>';
+}
+/* polling for live tools */
+var lpTimer=null;
+function livePoll(){
+  clearTimeout(lpTimer);
+  if(curTab==="send"&&sState&&sState.phase&&sState.phase!=="idle"){
+    api("GET","/api/send/state").then(function(st){if(!sState)return;sState=st;renderSend(st);if(["done","error","cancelled"].indexOf(st.phase)>=0)sState.final=true;}).catch(function(){}).then(function(){if(sState&&!sState.final)lpTimer=setTimeout(livePoll,300);});
+  }else if(curTab==="recv"){
+    var act=rState&&rState.phase&&rState.phase!=="idle";
+    if(act)api("GET","/api/recv/state").then(function(st){if(!rState)return;rState=st;renderRecv(st);if(["done","error"].indexOf(st.phase)>=0)rState.final=true;}).catch(function(){}).then(function(){if(rState&&!rState.final)lpTimer=setTimeout(livePoll,300);else if(!rState)lpTimer=setTimeout(livePoll,1000);});
+    else{discover();lpTimer=setTimeout(livePoll,1000);}
+  }else if(curTab==="send"){loadOutbox();}
+}
+function initLive(){
+  api("GET","/api/info").then(function(i){
+    var u="http://"+i.ip+":"+(location.port||80);
+    $("hostcard").innerHTML='<b>'+esc(i.hostname)+'</b> &middot; '+esc(i.ip)+'<br>Phones: '+esc(u)+'/download &middot; '+esc(u)+'/upload';
+  }).catch(function(){});
+  // resume existing sessions
+  api("GET","/api/send/state").then(function(st){if(st&&st.phase&&st.phase!=="idle"){sState=st;renderSend(st);livePoll();}}).catch(function(){});
+  api("GET","/api/recv/state").then(function(st){if(st&&st.phase&&st.phase!=="idle"){rState=st;renderRecv(st);}}).catch(function(){});
+  loadOutbox();
+}
+initLive();
+var _h=location.hash.slice(1);setTab(["send","recv","live","sweep"].indexOf(_h)>=0?_h:"send");poll();
+</script>
+</body>
+</html>

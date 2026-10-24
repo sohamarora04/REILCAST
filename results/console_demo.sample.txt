@@ -1,0 +1,23 @@
+$ python run.py demo --receivers 6 --loss 0.08 --shared-loss 0.03
+[sample console output - synthetic]
+ReliCast demo  file=512 KB  chunks=512  group=239.255.42.99  iface=127.0.0.1
+
+[tcp] starting transfer to 6 receivers ...
+  SNTP: offsets(ms)=374.2, 311.7, -142.4, -349.6, 293.3, 421.5
+  done in 1.31s  delivery=1.000  verified=True
+  sender_bytes=3701971  nack=0 suppressed=0 repair=0  overhead=7.06x
+
+[udp] starting transfer to 6 receivers ...
+  SNTP: offsets(ms)=-125.3, -220.0, -440.9, 274.8, -158.0, -386.3
+  done in 0.76s  delivery=0.892  verified=False
+  sender_bytes=3305472  nack=0 suppressed=0 repair=0  overhead=6.30x
+
+[naive] starting transfer to 6 receivers ...
+  SNTP: offsets(ms)=-136.6, 289.1, -341.5, 403.4, 386.4, -399.6
+  done in 0.51s  delivery=1.000  verified=True
+  sender_bytes=1287972  nack=628 suppressed=0 repair=678  overhead=2.56x
+
+[relicast] starting transfer to 6 receivers ...
+  SNTP: offsets(ms)=104.2, 342.7, -480.9, 191.2, 427.6, 479.8
+  done in 0.27s  delivery=1.000  verified=True
+  sender_bytes=787632  nack=78 suppressed=208 repair=216  overhead=1.51x

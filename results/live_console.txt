@@ -1,0 +1,24 @@
+$ python run.py send movie.bin --mode relicast --rate-mbps 24      # sender laptop
+Sharing movie.bin (6.00 MB) with relicast | session 10.232.205.94:54909
+On each receiving device run:  python run.py receive      (or   --host 10.232.205.94 --port 54909)
+Press Enter to START once all receivers have joined (Ctrl+C to cancel).
+  receivers joined: 2  (10.232.205.94, 10.232.205.94)
+  probing multicast reachability...            
+Finished in 2.27s | all verified: True | sender bytes 12.97 MB | NACKs 178 (suppressed 0) | repairs 257
+  receiver 1 10.232.205.94   via tcp   OK
+  receiver 2 10.232.205.94   via mcast OK
+
+$ python run.py receive      # receiver A (4% packet loss injected on its link)
+Looking for senders on this network (Ctrl+C to quit)...
+  [0] movie.bin  (6.00 MB, relicast) from Soham-Aroras-MacBook-Pro-M3.local 10.232.205.94:54909
+Saved received_A/movie.bin  (SHA-256 verified)
+
+$ python run.py receive      # receiver B (multicast blocked, e.g. hotspot client isolation)
+Looking for senders on this network (Ctrl+C to quit)...
+  [0] movie.bin  (6.00 MB, relicast) from Soham-Aroras-MacBook-Pro-M3.local 10.232.205.94:54909
+Saved received_B/movie.bin  (SHA-256 verified)
+
+$ shasum -a 256 movie.bin received/movie.bin
+d3c29ec7615a629574df3a188c5179e182b68890fabd0af6b30240c2c90a6ee5  movie.bin
+d3c29ec7615a629574df3a188c5179e182b68890fabd0af6b30240c2c90a6ee5  received_A/movie.bin
+d3c29ec7615a629574df3a188c5179e182b68890fabd0af6b30240c2c90a6ee5  received_B/movie.bin

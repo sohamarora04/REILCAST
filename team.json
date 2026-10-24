@@ -1,0 +1,18 @@
+{
+  "title": "ReliCast: NACK-Suppressed Reliable Multicast for LAN Content Distribution with SNTP-Synchronised Measurement",
+  "course_code": "23CS7PCNWP",
+  "course_title": "Network Programming",
+  "members": [
+    {"name": "NAME 1", "usn": "USN 1"},
+    {"name": "NAME 2", "usn": "USN 2"},
+    {"name": "NAME 3", "usn": "USN 3"},
+    {"name": "NAME 4", "usn": "USN 4"}
+  ],
+  "guide": "Dr. Anitha H M",
+  "guide_designation": "Associate Professor",
+  "coordinator": "Dr. Anitha H M",
+  "hod": "Dr. Shubha Rao V",
+  "department": "Department of Computer Science and Engineering",
+  "year": "2026-2027",
+  "submission_date": "2026"
+}

@@ -1,0 +1,20 @@
+ReliCast demo | interface 10.232.205.94 | 6 receivers | loss 8% (+3% shared) | 512 KB file
+Receiver clocks are skewed by +/-100..500 ms; SNTP must correct them before delays are measured.
+  TCP unicast                  done in 1.83s | delivery 100.0% | verified True | sender 3.76 MB | NACKs 0 (suppressed 0) | repairs 378
+  Raw UDP unicast              done in 0.98s | delivery 89.0% | verified False | sender 3.31 MB | NACKs 0 (suppressed 0) | repairs 0
+  Multicast + immediate NACK   done in 0.35s | delivery 100.0% | verified True | sender 0.92 MB | NACKs 338 (suppressed 0) | repairs 346
+  ReliCast (proposed)          done in 0.43s | delivery 100.0% | verified True | sender 0.80 MB | NACKs 121 (suppressed 130) | repairs 235
+
++----------------------------+---------+-----------+----------+----------+-------+--------+---------+--------+-----------+
+| Mode                       | Time(s) | Sender MB | Overhead | Delivery | NACKs | Suppr. | Repairs | OWD ms | Jitter ms |
++----------------------------+---------+-----------+----------+----------+-------+--------+---------+--------+-----------+
+| TCP unicast                | 1.83    | 3.76      | 7.17x    | 100.0%   | 0     | 0      | 378     | 0.167  | 0.041     |
+| Raw UDP unicast            | 0.98    | 3.31      | 6.30x    | 89.0%    | 0     | 0      | 0       | 0.975  | 1.118     |
+| Multicast + immediate NACK | 0.35    | 0.92      | 1.80x    | 100.0%   | 338   | 0      | 346     | 2.543  | 0.274     |
+| ReliCast (proposed)        | 0.43    | 0.80      | 1.55x    | 100.0%   | 121   | 130    | 235     | 3.309  | 0.247     |
++----------------------------+---------+-----------+----------+----------+-------+--------+---------+--------+-----------+
+
+ReliCast vs TCP-unicast: 4.7x fewer sender bytes, 4.3x faster. vs naive multicast: 2.8x fewer NACKs.
+SNTP: injected skews (ms) 262, 339, -360, 192, 262, -183
+      estimated offsets   261, 339, -361, 192, 262, -184
+      one-way delay: raw (unsynchronised) 88.9 ms  ->  SNTP-corrected 3.309 ms
