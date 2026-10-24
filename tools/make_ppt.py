@@ -137,10 +137,10 @@ def build(D, T, out):
     # 8 algorithm
     s = d.slide("Algorithm: NACK suppression", "Randomised timer, suppression on overheard NACK, back-off, sender hold-off and aggregation.")
     d.pic(s, fig("nack_flowchart.png"), 0.6, 1.3, 5.4, 5.6)
-    d.bullets(s, ["**Timer: **T = U[0,1) x W x 2^k, W = clamp(20 + 4(owd + 4 jitter), 20, 200) ms",
+    d.bullets(s, ["**Timer: **T = U[0,1) x W x 2^k, W = clamp(10 + 3(owd + 4 jitter), 10, 100) ms",
                   "**Suppression: **an overheard NACK covering my gap cancels my timer",
                   "**Expected NACKs per lost chunk: **~ 1 + M*d/W (M receivers missing it, d = delay) vs M without suppression",
-                  "**Sender: **10 ms hold-off, repair the union of ranges once, 30 ms repair guard",
+                  "**Sender: **6 ms hold-off, repair the union of ranges once, 30 ms repair guard",
                   "**Result at demo point: **%d NACKs vs %d naive (%.0f%% fewer); %d suppressed" % (F["relicast_nack_packets"], F["naive_nack_packets"], F["nack_red"], F["relicast_nack_suppressed"])], 6.3, 1.5, 6.5, 5, 17, 8)
     # 9 SNTP
     s = d.slide("SNTP: measuring one-way delay", "Receivers have injected clock skew of +/-100..500 ms; SNTP corrects it.")

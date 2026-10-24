@@ -122,7 +122,7 @@ def diagrams():
     # ---- architecture
     fig, ax = canvas(120, 70, (10.5, 6.2))
     ax.add_patch(FancyBboxPatch((1, 4), 38, 62, boxstyle="round,pad=0.02,rounding_size=1.5", fc="#f0fdf4", ec="#16a34a", lw=2)); ax.text(20, 63, "SENDER PROCESS", ha="center", fontsize=11, fontweight="bold", color="#15803d")
-    sb = [("File chunker\n+ SHA-256 (1 KB chunks)", 53), ("Link-rate pacer\n(pkts/s, flow control)", 43.5), ("Multicast TX socket\nDATA / REPAIR / HEARTBEAT / FIN", 34), ("Repair aggregator\n10 ms hold-off, union of ranges", 24.5), ("TCP control listener\nmeta JSON, final stats", 15), ("SNTP server (UDP)\nRFC 4330", 6)]
+    sb = [("File chunker\n+ SHA-256 (1 KB chunks)", 53), ("Link-rate pacer\n(pkts/s, flow control)", 43.5), ("Multicast TX socket\nDATA / REPAIR / HEARTBEAT / FIN", 34), ("Repair aggregator\n6 ms hold-off, union of ranges", 24.5), ("TCP control listener\nmeta JSON, final stats", 15), ("SNTP server (UDP)\nRFC 4330", 6)]
     for t, y in sb: box(ax, 5, y - 1, 30, 7.2, t, fc="#dcfce7", ec="#16a34a", fs=8)
     ax.add_patch(FancyBboxPatch((46, 6), 28, 58, boxstyle="round,pad=0.02,rounding_size=1.5", fc="#f8fafc", ec="#64748b", lw=1.5, ls="--")); ax.text(60, 61, "LAN / IP MULTICAST", ha="center", fontsize=10, fontweight="bold", color="#475569")
     box(ax, 49, 44, 22, 11, "UDP multicast group\n239.255.42.99:port\n(1 copy, TTL = 1)", fc="#fef3c7", ec="#d97706", fs=8.5)
@@ -151,7 +151,7 @@ def diagrams():
             ("R", "G", 68, "5. IP_ADD_MEMBERSHIP (IGMP join)", "#d97706"), ("R", "S", 63, "6. TCP {ready:true, rid, udp_port}", "#6b7280"),
             ("S", "G", 57, "7. DATA seq 0..C-1 (paced multicast)", "#16a34a"), ("S", "G", 52, "8. HEARTBEAT (highest seq)", "#16a34a"),
             ("R", "G", 45, "9. random timer T in [0, W) -> NACK ranges", "#dc2626"), ("G", "R", 40.5, "(overheard NACK -> others suppress)", "#dc2626"),
-            ("G", "S", 36, "10. NACK arrives; 10 ms hold-off, union", "#dc2626"), ("S", "G", 30, "11. REPAIR for union of missing ranges", "#16a34a"),
+            ("G", "S", 36, "10. NACK arrives; 6 ms hold-off, union", "#dc2626"), ("S", "G", 30, "11. REPAIR for union of missing ranges", "#16a34a"),
             ("R", "R", 24, "12. all chunks present -> verify SHA-256", "#111"), ("R", "S", 19, "13. TCP final stats JSON (recv, dups, nacks, OWD)", "#6b7280"),
             ("S", "G", 13, "14. FIN (multicast), close TCP", "#16a34a")]
     for a, b, y, t, c in msgs:
@@ -170,7 +170,7 @@ def diagrams():
         ax.text(x + w / 2, y + h / 2, t, ha="center", va="center", fontsize=7.8, zorder=3)
     cx = 50; hw = 24
     box(ax, cx - hw, 120, 2 * hw, 8, "Gap detected:\nseq jump or HEARTBEAT > highest", fc="#dbeafe", ec="#2563eb", fs=8)
-    box(ax, cx - hw, 105, 2 * hw, 9, "Compute missing ranges M;\nW = clamp(20 + 4(owd + 4 jit), 20, 200) ms", fc="#dbeafe", ec="#2563eb", fs=7.6)
+    box(ax, cx - hw, 105, 2 * hw, 9, "Compute missing ranges M;\nW = clamp(10 + 3(owd + 4 jit), 10, 100) ms", fc="#dbeafe", ec="#2563eb", fs=7.6)
     box(ax, cx - hw, 90, 2 * hw, 9, "Arm timer: T = U[0,1) * W * 2^k\n(k = retry count)", fc="#dbeafe", ec="#2563eb", fs=8)
     dia(cx - 20, 71, 40, 14, "NACK for a superset of M\nheard before T expires?")
     box(ax, cx - hw, 54, 2 * hw, 8, "T expires: multicast NACK(M)", fc="#fee2e2", ec="#dc2626", fs=8.3)
