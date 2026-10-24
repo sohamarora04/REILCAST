@@ -91,6 +91,15 @@ button.danger{background:var(--naive)}
 .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin:10px 0}
 .hostcard{font-size:12px;color:var(--mute);text-align:right;line-height:1.35}.hostcard b{color:var(--ink)}
 .err{color:var(--naive)}
+.topo{display:grid;grid-template-columns:repeat(auto-fit,minmax(420px,1fr));gap:12px}
+.topo .tp{border:2px solid var(--line);border-radius:10px;padding:8px 10px;transition:border-color .2s}
+.topo .tp.cur{border-color:var(--accent)}
+.topo .tp h3{margin:0 0 2px;font-size:14px;display:flex;align-items:center;gap:6px}
+.topo .tp .cap{font-size:12px;color:var(--mute);min-height:34px}
+.topo svg{width:100%;height:auto;display:block}
+.topo .box{fill:var(--bg);stroke:var(--line);stroke-width:1.5}
+.tleg{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--mute);margin-top:8px}
+.tleg i{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:5px}
 </style>
 </head>
 <body>
@@ -170,7 +179,13 @@ button.danger{background:var(--naive)}
   </div>
 
   <div id="tab-live" class="hide">
-    <section class="card" id="livecard">
+    <section class="card" id="topocard">
+      <h2>Network topology: how each protocol sends to <span id="topoN">6</span> receivers</h2>
+      <div class="topo" id="topo"></div>
+      <div class="tleg"><span><i style="background:var(--ink)"></i>data (1st transmission)</span><span><i style="background:var(--naive)"></i>NACK (receiver &rarr; sender)</span>
+        <span><i style="background:var(--accent)"></i>repair</span><span><i style="border:1.5px solid var(--mute)"></i>TCP ACK</span><span>Receiver outline red = data still missing</span></div>
+    </section>
+    <section class="card mt" id="livecard">
       <h2 id="livetitle">Live transfer</h2>
       <div class="pbar"><i id="pb"></i></div>
       <div class="counters" id="ctrs"></div>
@@ -204,7 +219,7 @@ function fbytes(b){if(b==null)return "-";if(b>=1e6)return (b/1e6).toFixed(2)+" M
 
 /* ---------- controls ---------- */
 [["n","vN"],["loss","vL"],["shared","vS"]].forEach(function(p){
-  $(p[0]).oninput=function(){$(p[1]).textContent=$(p[0]).value;};
+  $(p[0]).oninput=function(){$(p[1]).textContent=$(p[0]).value;if(p[0]==="n")topoUpdate(last);};
 });
 $("run").onclick=function(){
   var body={n:+$("n").value,loss:+$("loss").value/100,shared_loss:+$("shared").value/100,size_kb:+$("size").value};
@@ -241,9 +256,75 @@ function render(s){
   $("run").disabled=s.phase==="running";
   $("msg").textContent=s.message||"";
   renderLive(s);
+  topoUpdate(s);
   var k=JSON.stringify(Object.keys(s.results||{}))+s.phase;
   if(curTab!=="live"){resKey="";return;}
   if(k!==resKey||s.phase==="running"&&k!==resKey){resKey=k;renderResults(s);}
+}
+
+
+/* ---------- topology diagrams ---------- */
+var TOPO_TXT={
+  tcp:"N separate TCP connections: the sender pushes the whole file N times, every receiver ACKs back.",
+  udp:"N unicast UDP copies: same N-fold traffic, but no ACKs and no repair, so lost packets stay lost.",
+  naive:"One multicast stream (239.255.42.99), but on every loss all receivers NACK at once: NACK storm.",
+  relicast:"One multicast stream. Random NACK timers: one receiver NACKs, the others hear it and stay quiet; one repair serves all."
+};
+function topoSvg(m,n,r){
+  var show=Math.min(n,12),W=520,H=300,ys=[],i,o="",stl="style=\"fill:var(--"+m+")\"",mc=(m==="naive"||m==="relicast");
+  for(i=0;i<show;i++)ys.push(show===1?150:34+i*(236/(show-1)));
+  var per=(r&&r.per_receiver)||[];
+  // links
+  for(i=0;i<show;i++)o+='<line x1="240" y1="150" x2="430" y2="'+ys[i]+'" style="stroke:var(--line)" stroke-width="1.5"/>';
+  var up=mc?1:Math.min(n,6),k;
+  for(k=0;k<up;k++){var off=up===1?0:(k-(up-1)/2)*5;
+    o+='<line x1="90" y1="'+(150+off)+'" x2="200" y2="'+(150+off)+'" style="stroke:'+(mc?"var(--"+m+")":"var(--line)")+'" stroke-width="'+(mc?3:1.5)+'"/>';}
+  o+='<line x1="90" y1="150" x2="200" y2="150" style="stroke:transparent"/>';
+  // nodes
+  o+='<rect class="box" x="10" y="120" width="80" height="60" rx="8"/><text class="t" x="50" y="146" text-anchor="middle">Sender</text><text x="50" y="162" text-anchor="middle">file+SNTP</text>';
+  o+='<rect class="box" x="200" y="125" width="40" height="50" rx="6"/><text x="220" y="154" text-anchor="middle">switch</text>';
+  for(i=0;i<show;i++){
+    var bad=per[i]&&per[i].missing_final>0;
+    o+='<rect class="box" x="430" y="'+(ys[i]-8)+'" width="70" height="16" rx="4" style="'+(bad?"stroke:var(--naive)":"stroke:var(--"+m+")")+'"/><text x="465" y="'+(ys[i]+4)+'" text-anchor="middle" style="font-size:10px">R'+(i+1)+'</text>';}
+  if(n>show)o+='<text x="465" y="'+(H-4)+'" text-anchor="middle">+'+(n-show)+' more</text>';
+  o+='<text class="v" x="145" y="'+(mc?138:112)+'" text-anchor="middle">'+(mc?"1 copy":n+" copies")+'</text>';
+  if(mc)o+='<text x="465" y="12" text-anchor="middle" style="font-size:10px">group 239.255.42.99</text>';
+  // animated packets
+  function dot(path,fill,begin,rad,hollow){
+    return '<circle r="'+rad+'" style="'+(hollow?"fill:var(--card);stroke:"+fill+";stroke-width:1.5":"fill:"+fill)+'"><animateMotion dur="1.8s" begin="'+begin+'s" repeatCount="indefinite" path="'+path+'"/></circle>';}
+  for(i=0;i<show;i++){
+    var off2=mc?0:((i%up)-(up-1)/2)*5,fwd="M90,"+(150+off2)+" L220,150 L430,"+ys[i],back="M430,"+ys[i]+" L220,150 L90,150";
+    o+=dot(fwd,"var(--"+(m==="tcp"?"ink":m)+")",(mc?0:(i*0.15)).toFixed(2),3.2);
+    if(m==="tcp")o+=dot(back,"var(--mute)",(i*0.15+0.9).toFixed(2),2.6,true);
+    if(m==="naive")o+=dot(back,"var(--naive)",(0.9+(i%4)*0.07).toFixed(2),3);
+  }
+  if(m==="relicast"){
+    var j=Math.min(1,show-1);
+    o+=dot("M430,"+ys[j]+" L220,150 L90,150","var(--naive)","0.9",3.4);
+    o+=dot("M90,150 L220,150 L430,"+ys[Math.max(0,show-1)],"var(--accent)","2.2",3.4);
+    for(i=0;i<show;i++){if(i!==j)o+='<text x="418" y="'+(ys[i]+3)+'" text-anchor="end" style="font-size:9px">shh</text>';}
+    for(i=0;i<show;i++)o+=dot("M90,150 L220,150 L430,"+ys[i],"var(--accent)","2.2",2.4);
+  }
+  if(m==="naive")for(i=0;i<show;i++)o+=dot("M90,150 L220,150 L430,"+ys[i],"var(--accent)",(2.2+(i%4)*0.05).toFixed(2),2.4);
+  return '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+LABEL[m]+' topology">'+o+'</svg>';
+}
+function drawTopo(s){
+  var R=(s&&s.results)||{},n=+$("n").value;
+  $("topoN").textContent=n;
+  var h="";
+  MODES.forEach(function(m){
+    var r=R[m]&&R[m].n===n?R[m]:null,cap=TOPO_TXT[m];
+    if(r)cap+=' <b>Result: '+fbytes(r.total_bytes)+' on wire, '+r.nack_packets+' NACKs, '+fmt(100*r.delivery_ratio,1)+'% delivered.</b>';
+    h+='<div class="tp" id="topo-'+m+'"><h3><span class="dot" style="background:var(--'+m+')"></span>'+LABEL[m]+'</h3>'+topoSvg(m,n,r)+'<div class="cap">'+cap+'</div></div>';
+  });
+  $("topo").innerHTML=h;
+  topoMark(s);
+}
+function topoMark(s){MODES.forEach(function(m){var e=$("topo-"+m);if(e)e.classList.toggle("cur",!!s&&s.phase==="running"&&s.current_mode===m);});}
+var topoKey="";
+function topoUpdate(s){
+  var k=$("n").value+"|"+JSON.stringify(Object.keys((s&&s.results)||{}))+"|"+((s&&s.results&&s.results.relicast)?s.results.relicast.duration_s:"");
+  if(k!==topoKey){topoKey=k;drawTopo(s);}else topoMark(s);
 }
 
 /* ---------- live chunk map ---------- */

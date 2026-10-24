@@ -1,0 +1,23 @@
+! ReliCast Packet Tracer lab: 1 switch, 1 server, 8 PCs. Topology: Switch0 = 2960-24TT
+! Switch0 (CLI tab) - paste:
+enable
+configure terminal
+hostname SW1
+interface range fa0/1 - 9
+ switchport mode access
+ no shutdown
+end
+write memory
+!
+! IP plan (set on each device: Desktop > IP Configuration > Static, mask 255.255.255.0)
+! Port  Device     IP
+! Fa0/1 Sender     192.168.10.1     (a Server-PT)
+! Fa0/2 Receiver1  192.168.10.11
+! Fa0/3 Receiver2  192.168.10.12
+! Fa0/4 Receiver3  192.168.10.13
+! Fa0/5 Receiver4  192.168.10.14
+! Fa0/6 Receiver5  192.168.10.15
+! Fa0/7 Receiver6  192.168.10.16
+! Fa0/8 Receiver7  192.168.10.17
+! Fa0/9 Receiver8  192.168.10.18
+! Cables: Copper Straight-Through, device FastEthernet0 -> switch port above.
